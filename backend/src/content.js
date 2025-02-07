@@ -3,44 +3,6 @@ import pool from './db.js';
 
 const router = express.Router();
 
-router.get('/all-factories', async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT 
-                eco_factory.factory_name, 
-                factory_coordinates.latitude, 
-                factory_coordinates.longitude
-            FROM 
-                eco_factory
-            JOIN 
-                factory_coordinates ON eco_factory.id = factory_coordinates.factory_id
-        `);
-        res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-router.get('/measurements', async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT 
-                component_measurement.id,
-                component_measurement.component_id,
-                component_measurement.factory_id,
-                component_measurement.measurement_date,
-                component_measurement.value,
-                component_measurement.unit
-            FROM 
-                component_measurement
-        `);
-        res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// content.js
 router.get('/all-factories-data', async (req, res) => {
     try {
         const result = await pool.query(`
