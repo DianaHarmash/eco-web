@@ -1,0 +1,11 @@
+{
+    "name": "eco-web-frontend",
+    "version": "1.0.0",
+    "description": "Frontend for eco-web project",
+    "scripts": {
+      "start": "serve -s ."
+    },
+    "dependencies": {
+      "serve": "^14.2.1"
+    }
+  }
