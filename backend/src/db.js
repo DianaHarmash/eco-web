@@ -9,12 +9,10 @@ const pool = new Pool({
     port: 5432
 });
 
-// Добавляем обработчик ошибок для пула
 pool.on('error', (err) => {
     console.error('Unexpected error on idle client', err);
 });
 
-// Проверяем подключение
 pool.query('SELECT NOW()', (err, res) => {
     if (err) {
         console.error('Error connecting to the database:', err);
