@@ -160,7 +160,7 @@ VALUES
     -- Бенз(а)пірен (component_id = 7)
     (7, 1, '2025-01-01', 0.001, 'мг/м³'),
 
-    -- Iндекс якості повітря (component_id = 😍
+    -- Iндекс якості повітря (component_id = 8)
     (8, 1, '2025-01-01', 85.0, 'індекс');
 
 INSERT INTO component_measurement (component_id, factory_id, measurement_date, value, unit)
