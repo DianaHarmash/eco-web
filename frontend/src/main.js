@@ -1,3 +1,43 @@
+// Добавляем стили для графиков и тултипов
+const styles = `
+.chart-container {
+    position: relative;
+    width: 300px;
+    height: 150px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+.chart-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    display: none;
+    z-index: 1000;
+    white-space: nowrap;
+}
+
+.chart-line {
+    stroke: #2196F3;
+    stroke-width: 2;
+    fill: none;
+}
+
+.chart-point {
+    fill: #2196F3;
+    cursor: pointer;
+}
+`;
+
+const styleSheet = document.createElement("style");
+styleSheet.innerText = styles;
+document.head.appendChild(styleSheet);
+
 let map;
 let markers = [];
 let factoriesData = [];
@@ -30,6 +70,152 @@ function setupEventListeners() {
     checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', updateMarkersAndTable);
     });
+}
+
+function createChart(measurements, container) {
+    // Группируем измерения по компонентам
+    const measurementsByComponent = {};
+    measurements.forEach(m => {
+        if (!measurementsByComponent[m.component_name]) {
+            measurementsByComponent[m.component_name] = [];
+        }
+        measurementsByComponent[m.component_name].push(m);
+    });
+
+    // Создаем селект для выбора компонента
+    const select = document.createElement('select');
+    select.style.marginBottom = '10px';
+    Object.keys(measurementsByComponent).forEach(componentName => {
+        const option = document.createElement('option');
+        option.value = componentName;
+        option.textContent = componentName;
+        select.appendChild(option);
+    });
+    container.appendChild(select);
+
+    // Функция для создания графика конкретного компонента
+    function createComponentChart(componentMeasurements) {
+        const width = 300;
+        const height = 150;
+        const padding = 30;
+        
+        // Удаляем предыдущий график, если он есть
+        const oldChart = container.querySelector('.chart-container');
+        if (oldChart) {
+            oldChart.remove();
+        }
+        
+        const chartContainer = document.createElement('div');
+        chartContainer.className = 'chart-container';
+        chartContainer.style.position = 'relative';
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'chart-tooltip';
+        chartContainer.appendChild(tooltip);
+        
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', width);
+        svg.setAttribute('height', height);
+        
+        const values = componentMeasurements.map(m => parseFloat(m.value));
+        const minValue = Math.min(...values);
+        const maxValue = Math.max(...values);
+        
+        const xScale = (width - 2 * padding) / (componentMeasurements.length - 1);
+        const yScale = (height - 2 * padding) / (maxValue - minValue || 1); // Избегаем деления на ноль
+        
+        // Рисуем оси
+        const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        xAxis.setAttribute('d', `M ${padding} ${height - padding} H ${width - padding}`);
+        xAxis.setAttribute('stroke', '#000');
+        
+        const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        yAxis.setAttribute('d', `M ${padding} ${padding} V ${height - padding}`);
+        yAxis.setAttribute('stroke', '#000');
+        
+        svg.appendChild(xAxis);
+        svg.appendChild(yAxis);
+
+        // Y axis labels
+        const yLabels = 5;
+        for (let i = 0; i <= yLabels; i++) {
+            const value = minValue + (maxValue - minValue) * (i / yLabels);
+            const y = height - padding - (value - minValue) * yScale;
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', padding - 5);
+            text.setAttribute('y', y);
+            text.setAttribute('text-anchor', 'end');
+            text.setAttribute('alignment-baseline', 'middle');
+            text.setAttribute('font-size', '10');
+            text.textContent = value.toFixed(1);
+            svg.appendChild(text);
+        }
+        
+        // Рисуем линию графика
+        let pathD = '';
+        const points = [];
+        
+        componentMeasurements.forEach((m, i) => {
+            const x = padding + i * xScale;
+            const y = height - padding - (m.value - minValue) * yScale;
+            
+            if (i === 0) {
+                pathD += `M ${x} ${y}`;
+            } else {
+                pathD += ` L ${x} ${y}`;
+            }
+            
+            points.push({ x, y, measurement: m });
+        });
+        
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathD);
+        path.setAttribute('class', 'chart-line');
+        svg.appendChild(path);
+        
+        // Добавляем точки и обработчики событий
+        points.forEach(point => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', point.x);
+            circle.setAttribute('cy', point.y);
+            circle.setAttribute('r', '5');
+            circle.setAttribute('class', 'chart-point');
+            
+            circle.addEventListener('mouseover', (e) => {
+                const [year, month, day] = point.measurement.measurement_date.split('-');
+                tooltip.style.display = 'block';
+                tooltip.style.left = `${e.clientX - chartContainer.getBoundingClientRect().left + 10}px`;
+                tooltip.style.top = `${e.clientY - chartContainer.getBoundingClientRect().top - 20}px`;
+                tooltip.innerHTML = `
+                    Значення: ${point.measurement.value} ${point.measurement.unit}<br>
+                    Дата: ${day}.${month}.${year}
+                `;
+                circle.setAttribute('r', '7');
+            });
+            
+            circle.addEventListener('mouseout', () => {
+                tooltip.style.display = 'none';
+                circle.setAttribute('r', '5');
+            });
+            
+            svg.appendChild(circle);
+        });
+        
+        chartContainer.appendChild(svg);
+        container.appendChild(chartContainer);
+    }
+
+    // Обработчик изменения выбранного компонента
+    select.addEventListener('change', () => {
+        const selectedComponent = select.value;
+        createComponentChart(measurementsByComponent[selectedComponent]);
+    });
+
+    // Изначально показываем первый компонент
+    if (Object.keys(measurementsByComponent).length > 0) {
+        const firstComponent = Object.keys(measurementsByComponent)[0];
+        createComponentChart(measurementsByComponent[firstComponent]);
+    }
 }
 
 function updateMarkersAndTable() {
@@ -87,12 +273,16 @@ function getCategoryKeyword(category) {
 }
 
 function createInfoWindowContent(factory) {
-    let content = `
-        <div class="info-window">
-            <h3>${factory.factory_name}</h3>
-            <p>Координати: ${factory.latitude}, ${factory.longitude}</p>
-            <h4>Показники:</h4>
-    `;
+    const container = document.createElement('div');
+    container.className = 'info-window';
+    
+    const title = document.createElement('h3');
+    title.textContent = factory.factory_name;
+    container.appendChild(title);
+    
+    const coords = document.createElement('p');
+    coords.textContent = `Координати: ${factory.latitude}, ${factory.longitude}`;
+    container.appendChild(coords);
 
     const measurementsByCategory = {};
     factory.measurements.forEach(m => {
@@ -101,48 +291,66 @@ function createInfoWindowContent(factory) {
         }
         measurementsByCategory[m.category_name].push(m);
     });
-
+    
     Object.entries(measurementsByCategory).forEach(([category, measurements]) => {
-        content += `<p><strong>${category}:</strong></p><ul>`;
-        measurements.forEach(m => {
-            content += `<li>${m.component_name}: ${m.value} ${m.unit}</li>`;
-        });
-        content += '</ul>';
+        const categoryTitle = document.createElement('h4');
+        categoryTitle.textContent = category;
+        container.appendChild(categoryTitle);
+        
+        createChart(measurements, container);
     });
-
-    content += '</div>';
-    return content;
+    
+    return container;
 }
 
 function updateDataTable(factories, selectedCategories) {
     const tableContainer = document.getElementById('tableContainer');
+    tableContainer.innerHTML = '';
     
-    let html = `
-        <table>
-            <thead>
-                <tr>
-                    <th>Назва фабрики</th>
-                    ${selectedCategories.map(category => `
-                        <th>${getCategoryDisplayName(category)}</th>
-                    `).join('')}
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const tbody = document.createElement('tbody');
+    
+    const headerRow = document.createElement('tr');
+    const factoryHeader = document.createElement('th');
+    factoryHeader.textContent = 'Назва фабрики';
+    headerRow.appendChild(factoryHeader);
+    
+    selectedCategories.forEach(category => {
+        const th = document.createElement('th');
+        th.textContent = getCategoryDisplayName(category);
+        headerRow.appendChild(th);
+    });
+    
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    
     factories.forEach(factory => {
-        html += `<tr>
-            <td>${factory.factory_name}</td>`;
+        const row = document.createElement('tr');
+        const nameCell = document.createElement('td');
+        nameCell.textContent = factory.factory_name;
+        row.appendChild(nameCell);
+        
         selectedCategories.forEach(category => {
-            const categoryMeasurements = factory.measurements.filter(m => 
+            const cell = document.createElement('td');
+            const measurements = factory.measurements.filter(m => 
                 m.category_name.toLowerCase().includes(getCategoryKeyword(category))
             );
-            html += `<td>${formatMeasurements(categoryMeasurements)}</td>`;
+            
+            if (measurements.length > 0) {
+                createChart(measurements, cell);
+            } else {
+                cell.textContent = 'Немає даних';
+            }
+            
+            row.appendChild(cell);
         });
-        html += '</tr>';
+        
+        tbody.appendChild(row);
     });
-    html += '</tbody></table>';
-    tableContainer.innerHTML = html;
+    
+    table.appendChild(tbody);
+    tableContainer.appendChild(table);
 }
 
 function getCategoryDisplayName(category) {
@@ -158,13 +366,6 @@ function getCategoryDisplayName(category) {
     return displayNames[category];
 }
 
-function formatMeasurements(measurements) {
-    if (measurements.length === 0) return 'Немає даних';
-    return measurements.map(m => 
-        `${m.component_name}: ${m.value} ${m.unit}`
-    ).join('<br>');
-}
-
 (async function loadGoogleMaps() {
     const script = document.createElement("script");
     script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao&libraries=&v=beta";
@@ -172,4 +373,3 @@ function formatMeasurements(measurements) {
     script.onload = initMap;
     document.head.appendChild(script);
 })();
-
