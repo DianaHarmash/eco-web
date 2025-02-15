@@ -1,4 +1,3 @@
-// Добавляем стили для графиков и тултипов
 const styles = `
 .category-container {
     margin-bottom: 20px;
@@ -84,7 +83,6 @@ function setupEventListeners() {
 }
 
 function createChart(measurements, container) {
-    // Группируем измерения по категориям
     const measurementsByCategory = {};
     measurements.forEach(m => {
         if (!measurementsByCategory[m.category_name]) {
@@ -93,7 +91,6 @@ function createChart(measurements, container) {
         measurementsByCategory[m.category_name].push(m);
     });
 
-    // Создаем контейнер для каждой категории
     Object.entries(measurementsByCategory).forEach(([categoryName, categoryMeasurements]) => {
         const categoryContainer = document.createElement('div');
         categoryContainer.className = 'category-container';
@@ -102,7 +99,6 @@ function createChart(measurements, container) {
         categoryTitle.textContent = categoryName;
         categoryContainer.appendChild(categoryTitle);
 
-        // Группируем измерения по компонентам внутри категории
         const measurementsByComponent = {};
         categoryMeasurements.forEach(m => {
             if (!measurementsByComponent[m.component_name]) {
@@ -111,7 +107,6 @@ function createChart(measurements, container) {
             measurementsByComponent[m.component_name].push(m);
         });
 
-        // Создаем селект для выбора компонента
         const select = document.createElement('select');
         select.style.marginBottom = '10px';
         Object.keys(measurementsByComponent).forEach(componentName => {
@@ -122,15 +117,13 @@ function createChart(measurements, container) {
         });
         categoryContainer.appendChild(select);
 
-        // Создаем контейнер для графика этой категории
         const chartContainer = document.createElement('div');
         chartContainer.className = 'chart-container';
         categoryContainer.appendChild(chartContainer);
 
-        // Функция для создания графика конкретного компонента
         function createComponentChart(componentMeasurements) {
-            chartContainer.innerHTML = ''; // Очищаем только контейнер конкретной категории
-            
+            chartContainer.innerHTML = ''; 
+
             const tooltip = document.createElement('div');
             tooltip.className = 'chart-tooltip';
             chartContainer.appendChild(tooltip);
@@ -150,7 +143,6 @@ function createChart(measurements, container) {
             const xScale = (width - 2 * padding) / (componentMeasurements.length - 1);
             const yScale = (height - 2 * padding) / (maxValue - minValue || 1);
             
-            // Рисуем оси
             const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             xAxis.setAttribute('d', `M ${padding} ${height - padding} H ${width - padding}`);
             xAxis.setAttribute('stroke', '#000');
@@ -162,7 +154,6 @@ function createChart(measurements, container) {
             svg.appendChild(xAxis);
             svg.appendChild(yAxis);
 
-            // Y axis labels
             const yLabels = 5;
             for (let i = 0; i <= yLabels; i++) {
                 const value = minValue + (maxValue - minValue) * (i / yLabels);
@@ -177,7 +168,6 @@ function createChart(measurements, container) {
                 svg.appendChild(text);
             }
             
-            // Рисуем линию графика
             let pathD = '';
             const points = [];
             
@@ -199,7 +189,6 @@ function createChart(measurements, container) {
             path.setAttribute('class', 'chart-line');
             svg.appendChild(path);
             
-            // Добавляем точки и обработчики событий
             points.forEach(point => {
                 const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 circle.setAttribute('cx', point.x);
@@ -230,13 +219,11 @@ function createChart(measurements, container) {
             chartContainer.appendChild(svg);
         }
 
-        // Обработчик изменения выбранного компонента
         select.addEventListener('change', () => {
             const selectedComponent = select.value;
             createComponentChart(measurementsByComponent[selectedComponent]);
         });
 
-        // Изначально показываем первый компонент
         if (Object.keys(measurementsByComponent).length > 0) {
             const firstComponent = Object.keys(measurementsByComponent)[0];
             createComponentChart(measurementsByComponent[firstComponent]);
