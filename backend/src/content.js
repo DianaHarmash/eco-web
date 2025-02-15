@@ -14,10 +14,11 @@ router.get('/all-factories-data', async (req, res) => {
                     cc.component_name,
                     cm.value,
                     cm.unit,
-                    cm.measurement_date
+                    TO_CHAR(cm.measurement_date, 'YYYY-MM-DD') as measurement_date
                 FROM component_measurement cm
                 JOIN category_component cc ON cm.component_id = cc.id
                 JOIN category c ON cc.category_id = c.id
+                ORDER BY cm.measurement_date ASC
             )
             SELECT 
                 ef.id,
@@ -32,7 +33,7 @@ router.get('/all-factories-data', async (req, res) => {
                         'value', md.value,
                         'unit', md.unit,
                         'measurement_date', md.measurement_date
-                    )
+                    ) ORDER BY md.measurement_date
                 ) as measurements
             FROM eco_factory ef
             JOIN factory_coordinates fc ON ef.id = fc.factory_id
