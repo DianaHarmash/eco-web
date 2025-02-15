@@ -1,11 +1,22 @@
 // Добавляем стили для графиков и тултипов
 const styles = `
+.category-container {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.category-container h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
 .chart-container {
     position: relative;
     width: 300px;
     height: 150px;
     margin: 10px 0;
-    border: 1px solid #ddd;
     padding: 10px;
 }
 
@@ -73,149 +84,166 @@ function setupEventListeners() {
 }
 
 function createChart(measurements, container) {
-    // Группируем измерения по компонентам
-    const measurementsByComponent = {};
+    // Группируем измерения по категориям
+    const measurementsByCategory = {};
     measurements.forEach(m => {
-        if (!measurementsByComponent[m.component_name]) {
-            measurementsByComponent[m.component_name] = [];
+        if (!measurementsByCategory[m.category_name]) {
+            measurementsByCategory[m.category_name] = [];
         }
-        measurementsByComponent[m.component_name].push(m);
+        measurementsByCategory[m.category_name].push(m);
     });
 
-    // Создаем селект для выбора компонента
-    const select = document.createElement('select');
-    select.style.marginBottom = '10px';
-    Object.keys(measurementsByComponent).forEach(componentName => {
-        const option = document.createElement('option');
-        option.value = componentName;
-        option.textContent = componentName;
-        select.appendChild(option);
-    });
-    container.appendChild(select);
+    // Создаем контейнер для каждой категории
+    Object.entries(measurementsByCategory).forEach(([categoryName, categoryMeasurements]) => {
+        const categoryContainer = document.createElement('div');
+        categoryContainer.className = 'category-container';
+        
+        const categoryTitle = document.createElement('h4');
+        categoryTitle.textContent = categoryName;
+        categoryContainer.appendChild(categoryTitle);
 
-    // Функция для создания графика конкретного компонента
-    function createComponentChart(componentMeasurements) {
-        const width = 300;
-        const height = 150;
-        const padding = 30;
-        
-        // Удаляем предыдущий график, если он есть
-        const oldChart = container.querySelector('.chart-container');
-        if (oldChart) {
-            oldChart.remove();
-        }
-        
+        // Группируем измерения по компонентам внутри категории
+        const measurementsByComponent = {};
+        categoryMeasurements.forEach(m => {
+            if (!measurementsByComponent[m.component_name]) {
+                measurementsByComponent[m.component_name] = [];
+            }
+            measurementsByComponent[m.component_name].push(m);
+        });
+
+        // Создаем селект для выбора компонента
+        const select = document.createElement('select');
+        select.style.marginBottom = '10px';
+        Object.keys(measurementsByComponent).forEach(componentName => {
+            const option = document.createElement('option');
+            option.value = componentName;
+            option.textContent = componentName;
+            select.appendChild(option);
+        });
+        categoryContainer.appendChild(select);
+
+        // Создаем контейнер для графика этой категории
         const chartContainer = document.createElement('div');
         chartContainer.className = 'chart-container';
-        chartContainer.style.position = 'relative';
+        categoryContainer.appendChild(chartContainer);
 
-        const tooltip = document.createElement('div');
-        tooltip.className = 'chart-tooltip';
-        chartContainer.appendChild(tooltip);
-        
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('width', width);
-        svg.setAttribute('height', height);
-        
-        const values = componentMeasurements.map(m => parseFloat(m.value));
-        const minValue = Math.min(...values);
-        const maxValue = Math.max(...values);
-        
-        const xScale = (width - 2 * padding) / (componentMeasurements.length - 1);
-        const yScale = (height - 2 * padding) / (maxValue - minValue || 1); // Избегаем деления на ноль
-        
-        // Рисуем оси
-        const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        xAxis.setAttribute('d', `M ${padding} ${height - padding} H ${width - padding}`);
-        xAxis.setAttribute('stroke', '#000');
-        
-        const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        yAxis.setAttribute('d', `M ${padding} ${padding} V ${height - padding}`);
-        yAxis.setAttribute('stroke', '#000');
-        
-        svg.appendChild(xAxis);
-        svg.appendChild(yAxis);
-
-        // Y axis labels
-        const yLabels = 5;
-        for (let i = 0; i <= yLabels; i++) {
-            const value = minValue + (maxValue - minValue) * (i / yLabels);
-            const y = height - padding - (value - minValue) * yScale;
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('x', padding - 5);
-            text.setAttribute('y', y);
-            text.setAttribute('text-anchor', 'end');
-            text.setAttribute('alignment-baseline', 'middle');
-            text.setAttribute('font-size', '10');
-            text.textContent = value.toFixed(1);
-            svg.appendChild(text);
-        }
-        
-        // Рисуем линию графика
-        let pathD = '';
-        const points = [];
-        
-        componentMeasurements.forEach((m, i) => {
-            const x = padding + i * xScale;
-            const y = height - padding - (m.value - minValue) * yScale;
+        // Функция для создания графика конкретного компонента
+        function createComponentChart(componentMeasurements) {
+            chartContainer.innerHTML = ''; // Очищаем только контейнер конкретной категории
             
-            if (i === 0) {
-                pathD += `M ${x} ${y}`;
-            } else {
-                pathD += ` L ${x} ${y}`;
+            const tooltip = document.createElement('div');
+            tooltip.className = 'chart-tooltip';
+            chartContainer.appendChild(tooltip);
+
+            const width = 300;
+            const height = 150;
+            const padding = 30;
+            
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', width);
+            svg.setAttribute('height', height);
+            
+            const values = componentMeasurements.map(m => parseFloat(m.value));
+            const minValue = Math.min(...values);
+            const maxValue = Math.max(...values);
+            
+            const xScale = (width - 2 * padding) / (componentMeasurements.length - 1);
+            const yScale = (height - 2 * padding) / (maxValue - minValue || 1);
+            
+            // Рисуем оси
+            const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            xAxis.setAttribute('d', `M ${padding} ${height - padding} H ${width - padding}`);
+            xAxis.setAttribute('stroke', '#000');
+            
+            const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            yAxis.setAttribute('d', `M ${padding} ${padding} V ${height - padding}`);
+            yAxis.setAttribute('stroke', '#000');
+            
+            svg.appendChild(xAxis);
+            svg.appendChild(yAxis);
+
+            // Y axis labels
+            const yLabels = 5;
+            for (let i = 0; i <= yLabels; i++) {
+                const value = minValue + (maxValue - minValue) * (i / yLabels);
+                const y = height - padding - (value - minValue) * yScale;
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', padding - 5);
+                text.setAttribute('y', y);
+                text.setAttribute('text-anchor', 'end');
+                text.setAttribute('alignment-baseline', 'middle');
+                text.setAttribute('font-size', '10');
+                text.textContent = value.toFixed(1);
+                svg.appendChild(text);
             }
             
-            points.push({ x, y, measurement: m });
-        });
-        
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', pathD);
-        path.setAttribute('class', 'chart-line');
-        svg.appendChild(path);
-        
-        // Добавляем точки и обработчики событий
-        points.forEach(point => {
-            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.setAttribute('cx', point.x);
-            circle.setAttribute('cy', point.y);
-            circle.setAttribute('r', '5');
-            circle.setAttribute('class', 'chart-point');
+            // Рисуем линию графика
+            let pathD = '';
+            const points = [];
             
-            circle.addEventListener('mouseover', (e) => {
-                const [year, month, day] = point.measurement.measurement_date.split('-');
-                tooltip.style.display = 'block';
-                tooltip.style.left = `${e.clientX - chartContainer.getBoundingClientRect().left + 10}px`;
-                tooltip.style.top = `${e.clientY - chartContainer.getBoundingClientRect().top - 20}px`;
-                tooltip.innerHTML = `
-                    Значення: ${point.measurement.value} ${point.measurement.unit}<br>
-                    Дата: ${day}.${month}.${year}
-                `;
-                circle.setAttribute('r', '7');
+            componentMeasurements.forEach((m, i) => {
+                const x = padding + i * xScale;
+                const y = height - padding - (m.value - minValue) * yScale;
+                
+                if (i === 0) {
+                    pathD += `M ${x} ${y}`;
+                } else {
+                    pathD += ` L ${x} ${y}`;
+                }
+                
+                points.push({ x, y, measurement: m });
             });
             
-            circle.addEventListener('mouseout', () => {
-                tooltip.style.display = 'none';
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', pathD);
+            path.setAttribute('class', 'chart-line');
+            svg.appendChild(path);
+            
+            // Добавляем точки и обработчики событий
+            points.forEach(point => {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', point.x);
+                circle.setAttribute('cy', point.y);
                 circle.setAttribute('r', '5');
+                circle.setAttribute('class', 'chart-point');
+                
+                circle.addEventListener('mouseover', (e) => {
+                    const [year, month, day] = point.measurement.measurement_date.split('-');
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = `${e.clientX - chartContainer.getBoundingClientRect().left + 10}px`;
+                    tooltip.style.top = `${e.clientY - chartContainer.getBoundingClientRect().top - 20}px`;
+                    tooltip.innerHTML = `
+                        Значення: ${point.measurement.value} ${point.measurement.unit}<br>
+                        Дата: ${day}.${month}.${year}
+                    `;
+                    circle.setAttribute('r', '7');
+                });
+                
+                circle.addEventListener('mouseout', () => {
+                    tooltip.style.display = 'none';
+                    circle.setAttribute('r', '5');
+                });
+                
+                svg.appendChild(circle);
             });
             
-            svg.appendChild(circle);
+            chartContainer.appendChild(svg);
+        }
+
+        // Обработчик изменения выбранного компонента
+        select.addEventListener('change', () => {
+            const selectedComponent = select.value;
+            createComponentChart(measurementsByComponent[selectedComponent]);
         });
-        
-        chartContainer.appendChild(svg);
-        container.appendChild(chartContainer);
-    }
 
-    // Обработчик изменения выбранного компонента
-    select.addEventListener('change', () => {
-        const selectedComponent = select.value;
-        createComponentChart(measurementsByComponent[selectedComponent]);
+        // Изначально показываем первый компонент
+        if (Object.keys(measurementsByComponent).length > 0) {
+            const firstComponent = Object.keys(measurementsByComponent)[0];
+            createComponentChart(measurementsByComponent[firstComponent]);
+        }
+
+        container.appendChild(categoryContainer);
     });
-
-    // Изначально показываем первый компонент
-    if (Object.keys(measurementsByComponent).length > 0) {
-        const firstComponent = Object.keys(measurementsByComponent)[0];
-        createComponentChart(measurementsByComponent[firstComponent]);
-    }
 }
 
 function updateMarkersAndTable() {
@@ -284,21 +312,7 @@ function createInfoWindowContent(factory) {
     coords.textContent = `Координати: ${factory.latitude}, ${factory.longitude}`;
     container.appendChild(coords);
 
-    const measurementsByCategory = {};
-    factory.measurements.forEach(m => {
-        if (!measurementsByCategory[m.category_name]) {
-            measurementsByCategory[m.category_name] = [];
-        }
-        measurementsByCategory[m.category_name].push(m);
-    });
-    
-    Object.entries(measurementsByCategory).forEach(([category, measurements]) => {
-        const categoryTitle = document.createElement('h4');
-        categoryTitle.textContent = category;
-        container.appendChild(categoryTitle);
-        
-        createChart(measurements, container);
-    });
+    createChart(factory.measurements, container);
     
     return container;
 }
