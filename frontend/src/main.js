@@ -52,7 +52,6 @@ let map;
 let markers = [];
 let factoriesData = [];
 
-// Конфигурация компонентов по категориям
 const categoryComponents = {
     air: [
         'Вміст пилу',
@@ -119,7 +118,6 @@ const categoryComponents = {
     ]
 };
 
-// Состояние фильтров
 let categoryFilters = {
     air: true,
     water: true,
@@ -132,7 +130,6 @@ let categoryFilters = {
 
 let componentFilters = {};
 
-// Инициализация компонентных фильтров
 function initComponentFilters() {
     Object.values(categoryComponents).flat().forEach(component => {
         componentFilters[component] = true;
@@ -290,16 +287,13 @@ function createChart(measurements, container) {
     });
 }
 
-// Создание панели фильтров
 function createFilterPanel() {
     const filterPanel = document.getElementById('filterPanel');
     filterPanel.innerHTML = '';
 
-    // Создание контейнера для фильтров
     const container = document.createElement('div');
     container.className = 'flex';
 
-    // Левая панель с категориями
     const categoryPanel = document.createElement('div');
     categoryPanel.className = 'w-64 p-4 border-r';
     
@@ -326,7 +320,6 @@ function createFilterPanel() {
         categoryPanel.appendChild(label);
     });
 
-    // Правая панель с компонентами
     const componentPanel = document.createElement('div');
     componentPanel.className = 'w-96 p-4 max-h-screen overflow-y-auto';
 
@@ -373,17 +366,15 @@ function createFilterPanel() {
     filterPanel.appendChild(container);
 }
 
-// Обработчики изменений фильтров
 function handleCategoryChange(category) {
     categoryFilters[category] = !categoryFilters[category];
 
-    // Обновление компонентов категории
     categoryComponents[category].forEach(component => {
         componentFilters[component] = categoryFilters[category];
     });
 
     updateMarkersAndTable();
-    createFilterPanel(); // Перерисовка панели фильтров
+    createFilterPanel(); 
 }
 
 function handleComponentChange(component) {
@@ -408,20 +399,17 @@ function createInfoWindowContent(factory) {
     return container;
 }
 
-// Обновление маркеров и таблицы
 function updateMarkersAndTable() {
     markers.forEach(marker => marker.setMap(null));
     markers = [];
 
     const filteredFactories = factoriesData.filter(factory => {
         return factory.measurements.some(measurement => {
-            // Проверка категории
             const categoryName = measurement.category_name.toLowerCase();
             const categoryMatch = Object.entries(categoryFilters).some(([category, isSelected]) => 
                 isSelected && categoryName.includes(getCategoryKeyword(category))
             );
 
-            // Проверка компонента
             const componentMatch = componentFilters[measurement.component_name];
 
             return categoryMatch && componentMatch;
@@ -465,7 +453,6 @@ function updateDataTable(factories) {
     factoryHeader.textContent = 'Назва фабрики';
     headerRow.appendChild(factoryHeader);
     
-    // Добавляем заголовки только для выбранных категорий
     Object.entries(categoryFilters).forEach(([category, isSelected]) => {
         if (isSelected) {
             const th = document.createElement('th');
@@ -536,7 +523,6 @@ function getCategoryDisplayName(category) {
     return displayNames[category];
 }
 
-// Инициализация карты
 async function initMap() {
     const { Map } = await google.maps.importLibrary("maps");
     const { Marker } = await google.maps.importLibrary("marker");
@@ -561,7 +547,6 @@ async function initMap() {
     }
 }
 
-// Загрузка Google Maps
 (async function loadGoogleMaps() {
     const script = document.createElement("script");
     script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao&libraries=&v=beta";
