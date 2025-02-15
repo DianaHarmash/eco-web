@@ -52,33 +52,90 @@ let map;
 let markers = [];
 let factoriesData = [];
 
-async function initMap() {
-    const { Map } = await google.maps.importLibrary("maps");
-    const { Marker } = await google.maps.importLibrary("marker");
-    const { InfoWindow } = await google.maps.importLibrary("maps");
+// Конфигурация компонентов по категориям
+const categoryComponents = {
+    air: [
+        'Вміст пилу',
+        'Двоокис азоту (NO2)',
+        'Двоокис сірки (SO2)',
+        'Оксид вуглецю',
+        'Формальдегід (H2CO)',
+        'Свинець',
+        'Бенз(а)пірен',
+        'Iндекс якості повітря'
+    ],
+    water: [
+        'Показники епідемічної безпеки (мікробіологічні)',
+        'Показники епідемічної безпеки (паразитарні)',
+        'Санітарно-хімічні (органолептичні)',
+        'Санітарно-хімічні (фізико-хімічні)',
+        'Санітарно-хімічні (санітарно-токсикологічні)',
+        'Радіаційні показники',
+        'Індекс забрудненості води'
+    ],
+    ground: [
+        'Гумус',
+        'Рухомі сполуки фосфору (P2O5)',
+        'Рухомі сполуки калію (K2O)',
+        'Засоленість',
+        'Солонцюватість',
+        'Забруднення хімічними речовинами',
+        'pH',
+        'Бал бонітету для складового ґрунту'
+    ],
+    radiation: [
+        'Рівень радіації',
+        'Placeholder'
+    ],
+    economy: [
+        'Валовий внутрішній продукт',
+        'Вантажообіг',
+        'Пасажирообіг',
+        'Експорт товарів та послуг',
+        'Імпорт товарів та послуг',
+        'Заробітна плата',
+        'Індекс промислової продукції',
+        'Індекс обсягу сільськогосподарського виробництва',
+        'Індекс будівельної продукції',
+        'Індекс споживчих цін',
+        'Індекс цін виробників промислової продукції'
+    ],
+    health: [
+        'Медико-демографічні показники',
+        'Показники захворюваності та поширення хвороб (хворобливість)',
+        'Інвалідності та інвалідизації',
+        'Фізичного розвитку населення',
+        'Ризики захворювання',
+        'Прогноз захворювання',
+        'Прогноз тривалості життя'
+    ],
+    energy: [
+        'Обсяги використання води',
+        'Обсяги використання електроенергії',
+        'Обсяги використання газу',
+        'Обсяги використання теплової енергії за кожен місяць',
+        'Середні обсяги споживання за місяць та рік',
+        'Енергоефективність будівлі або виробництва'
+    ]
+};
 
-    map = new Map(document.getElementById("map"), {
-        center: { lat: 50.46002204159702, lng: 30.6198825268124 },
-        zoom: 10,
-    });
+// Состояние фильтров
+let categoryFilters = {
+    air: true,
+    water: true,
+    ground: true,
+    radiation: true,
+    economy: true,
+    health: true,
+    energy: true
+};
 
-    try {
-        const response = await fetch('/api/web-eco/all-factories-data');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        factoriesData = await response.json();
-        setupEventListeners();
-        updateMarkersAndTable();
-    } catch (error) {
-        console.error('Error fetching data:', error);
-    }
-}
+let componentFilters = {};
 
-function setupEventListeners() {
-    const checkboxes = document.querySelectorAll('#marker-options input[type="checkbox"]');
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateMarkersAndTable);
+// Инициализация компонентных фильтров
+function initComponentFilters() {
+    Object.values(categoryComponents).flat().forEach(component => {
+        componentFilters[component] = true;
     });
 }
 
@@ -233,20 +290,141 @@ function createChart(measurements, container) {
     });
 }
 
+// Создание панели фильтров
+function createFilterPanel() {
+    const filterPanel = document.getElementById('filterPanel');
+    filterPanel.innerHTML = '';
+
+    // Создание контейнера для фильтров
+    const container = document.createElement('div');
+    container.className = 'flex';
+
+    // Левая панель с категориями
+    const categoryPanel = document.createElement('div');
+    categoryPanel.className = 'w-64 p-4 border-r';
+    
+    const categoryTitle = document.createElement('h3');
+    categoryTitle.className = 'text-lg font-bold mb-4';
+    categoryTitle.textContent = 'Категорії';
+    categoryPanel.appendChild(categoryTitle);
+
+    Object.entries(categoryFilters).forEach(([category, checked]) => {
+        const label = document.createElement('label');
+        label.className = 'flex items-center mb-2';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = checked;
+        checkbox.className = 'mr-2';
+        checkbox.addEventListener('change', () => handleCategoryChange(category));
+
+        const span = document.createElement('span');
+        span.textContent = getCategoryDisplayName(category);
+
+        label.appendChild(checkbox);
+        label.appendChild(span);
+        categoryPanel.appendChild(label);
+    });
+
+    // Правая панель с компонентами
+    const componentPanel = document.createElement('div');
+    componentPanel.className = 'w-96 p-4 max-h-screen overflow-y-auto';
+
+    const componentTitle = document.createElement('h3');
+    componentTitle.className = 'text-lg font-bold mb-4';
+    componentTitle.textContent = 'Компоненти';
+    componentPanel.appendChild(componentTitle);
+
+    Object.entries(categoryComponents).forEach(([category, components]) => {
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = `mb-4 ${!categoryFilters[category] ? 'opacity-50' : ''}`;
+        categoryDiv.dataset.category = category;
+
+        const categoryHeader = document.createElement('h4');
+        categoryHeader.className = 'font-semibold mb-2';
+        categoryHeader.textContent = getCategoryDisplayName(category);
+        categoryDiv.appendChild(categoryHeader);
+
+        components.forEach(component => {
+            const label = document.createElement('label');
+            label.className = 'flex items-center mb-1 ml-4';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = componentFilters[component] || false;
+            checkbox.disabled = !categoryFilters[category];
+            checkbox.className = 'mr-2';
+            checkbox.addEventListener('change', () => handleComponentChange(component));
+
+            const span = document.createElement('span');
+            span.className = 'text-sm';
+            span.textContent = component;
+
+            label.appendChild(checkbox);
+            label.appendChild(span);
+            categoryDiv.appendChild(label);
+        });
+
+        componentPanel.appendChild(categoryDiv);
+    });
+
+    container.appendChild(categoryPanel);
+    container.appendChild(componentPanel);
+    filterPanel.appendChild(container);
+}
+
+// Обработчики изменений фильтров
+function handleCategoryChange(category) {
+    categoryFilters[category] = !categoryFilters[category];
+
+    // Обновление компонентов категории
+    categoryComponents[category].forEach(component => {
+        componentFilters[component] = categoryFilters[category];
+    });
+
+    updateMarkersAndTable();
+    createFilterPanel(); // Перерисовка панели фильтров
+}
+
+function handleComponentChange(component) {
+    componentFilters[component] = !componentFilters[component];
+    updateMarkersAndTable();
+}
+
+function createInfoWindowContent(factory) {
+    const container = document.createElement('div');
+    container.className = 'info-window';
+    
+    const title = document.createElement('h3');
+    title.textContent = factory.factory_name;
+    container.appendChild(title);
+    
+    const coords = document.createElement('p');
+    coords.textContent = `Координати: ${factory.latitude}, ${factory.longitude}`;
+    container.appendChild(coords);
+
+    createChart(factory.measurements, container);
+    
+    return container;
+}
+
+// Обновление маркеров и таблицы
 function updateMarkersAndTable() {
     markers.forEach(marker => marker.setMap(null));
     markers = [];
 
-    const selectedCategories = Array.from(
-        document.querySelectorAll('#marker-options input[type="checkbox"]:checked')
-    ).map(checkbox => checkbox.value);
-
     const filteredFactories = factoriesData.filter(factory => {
         return factory.measurements.some(measurement => {
+            // Проверка категории
             const categoryName = measurement.category_name.toLowerCase();
-            return selectedCategories.some(category => 
-                categoryName.includes(getCategoryKeyword(category))
+            const categoryMatch = Object.entries(categoryFilters).some(([category, isSelected]) => 
+                isSelected && categoryName.includes(getCategoryKeyword(category))
             );
+
+            // Проверка компонента
+            const componentMatch = componentFilters[measurement.component_name];
+
+            return categoryMatch && componentMatch;
         });
     });
 
@@ -271,7 +449,65 @@ function updateMarkersAndTable() {
         markers.push(marker);
     });
 
-    updateDataTable(filteredFactories, selectedCategories);
+    updateDataTable(filteredFactories);
+}
+
+function updateDataTable(factories) {
+    const tableContainer = document.getElementById('tableContainer');
+    tableContainer.innerHTML = '';
+    
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const tbody = document.createElement('tbody');
+    
+    const headerRow = document.createElement('tr');
+    const factoryHeader = document.createElement('th');
+    factoryHeader.textContent = 'Назва фабрики';
+    headerRow.appendChild(factoryHeader);
+    
+    // Добавляем заголовки только для выбранных категорий
+    Object.entries(categoryFilters).forEach(([category, isSelected]) => {
+        if (isSelected) {
+            const th = document.createElement('th');
+            th.textContent = getCategoryDisplayName(category);
+            headerRow.appendChild(th);
+        }
+    });
+    
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    
+    factories.forEach(factory => {
+        const row = document.createElement('tr');
+        const nameCell = document.createElement('td');
+        nameCell.textContent = factory.factory_name;
+        row.appendChild(nameCell);
+        
+        Object.entries(categoryFilters).forEach(([category, isSelected]) => {
+            if (isSelected) {
+                const cell = document.createElement('td');
+                const categoryMeasurements = factory.measurements.filter(m => {
+                    const categoryName = m.category_name.toLowerCase();
+                    const categoryMatch = categoryName.includes(getCategoryKeyword(category));
+                    const componentMatch = componentFilters[m.component_name];
+                    return categoryMatch && componentMatch;
+                });
+                
+                if (categoryMeasurements.length > 0) {
+                    createChart(categoryMeasurements, cell);
+                } else {
+                    cell.textContent = 'Немає даних';
+                }
+                
+                row.appendChild(cell);
+            }
+        });
+        
+        tbody.appendChild(row);
+    });
+    
+    table.appendChild(tbody);
+    tableContainer.appendChild(table);
 }
 
 function getCategoryKeyword(category) {
@@ -287,73 +523,6 @@ function getCategoryKeyword(category) {
     return categoryMap[category];
 }
 
-function createInfoWindowContent(factory) {
-    const container = document.createElement('div');
-    container.className = 'info-window';
-    
-    const title = document.createElement('h3');
-    title.textContent = factory.factory_name;
-    container.appendChild(title);
-    
-    const coords = document.createElement('p');
-    coords.textContent = `Координати: ${factory.latitude}, ${factory.longitude}`;
-    container.appendChild(coords);
-
-    createChart(factory.measurements, container);
-    
-    return container;
-}
-
-function updateDataTable(factories, selectedCategories) {
-    const tableContainer = document.getElementById('tableContainer');
-    tableContainer.innerHTML = '';
-    
-    const table = document.createElement('table');
-    const thead = document.createElement('thead');
-    const tbody = document.createElement('tbody');
-    
-    const headerRow = document.createElement('tr');
-    const factoryHeader = document.createElement('th');
-    factoryHeader.textContent = 'Назва фабрики';
-    headerRow.appendChild(factoryHeader);
-    
-    selectedCategories.forEach(category => {
-        const th = document.createElement('th');
-        th.textContent = getCategoryDisplayName(category);
-        headerRow.appendChild(th);
-    });
-    
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-    
-    factories.forEach(factory => {
-        const row = document.createElement('tr');
-        const nameCell = document.createElement('td');
-        nameCell.textContent = factory.factory_name;
-        row.appendChild(nameCell);
-        
-        selectedCategories.forEach(category => {
-            const cell = document.createElement('td');
-            const measurements = factory.measurements.filter(m => 
-                m.category_name.toLowerCase().includes(getCategoryKeyword(category))
-            );
-            
-            if (measurements.length > 0) {
-                createChart(measurements, cell);
-            } else {
-                cell.textContent = 'Немає даних';
-            }
-            
-            row.appendChild(cell);
-        });
-        
-        tbody.appendChild(row);
-    });
-    
-    table.appendChild(tbody);
-    tableContainer.appendChild(table);
-}
-
 function getCategoryDisplayName(category) {
     const displayNames = {
         'air': 'Стан повітря',
@@ -367,6 +536,32 @@ function getCategoryDisplayName(category) {
     return displayNames[category];
 }
 
+// Инициализация карты
+async function initMap() {
+    const { Map } = await google.maps.importLibrary("maps");
+    const { Marker } = await google.maps.importLibrary("marker");
+    const { InfoWindow } = await google.maps.importLibrary("maps");
+
+    map = new Map(document.getElementById("map"), {
+        center: { lat: 50.46002204159702, lng: 30.6198825268124 },
+        zoom: 10,
+    });
+
+    try {
+        const response = await fetch('/api/web-eco/all-factories-data');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        factoriesData = await response.json();
+        initComponentFilters();
+        createFilterPanel();
+        updateMarkersAndTable();
+    } catch (error) {
+        console.error('Error fetching data:', error);
+    }
+}
+
+// Загрузка Google Maps
 (async function loadGoogleMaps() {
     const script = document.createElement("script");
     script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao&libraries=&v=beta";
