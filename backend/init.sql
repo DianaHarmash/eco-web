@@ -1043,7 +1043,7 @@ VALUES
     (7, 8, '2025-01-01', 0.002, 'мг/м³'),
 
     -- Iндекс якості повітря (component_id = 8)
-    (8, 8, '2025-01-01', 88.0, 'індекс'), 
+    (8, 8, '2025-01-01', 88.0, 'індекс'); 
 
     INSERT INTO component_measurement (component_id, factory_id, measurement_date, value, unit)
 VALUES 
@@ -1132,7 +1132,7 @@ VALUES
     (22, 8, '2025-01-01', 6.2, 'pH'),
 
     -- Бал бонітету для складового ґрунту (component_id = 23)
-    (23, 8, '2025-01-01', 76.5, 'бал'), 
+    (23, 8, '2025-01-01', 76.5, 'бал'); 
 
     INSERT INTO component_measurement (component_id, factory_id, measurement_date, value, unit)
 VALUES 
@@ -1217,7 +1217,7 @@ VALUES
     (46, 8, '2025-01-01', 1300.0, 'випадків на рік'),
 
     -- Прогноз тривалості життя (component_id = 47)
-    (47, 8, '2025-01-01', 79.0, 'років'), 
+    (47, 8, '2025-01-01', 79.0, 'років'); 
 
     INSERT INTO component_measurement (component_id, factory_id, measurement_date, value, unit)
 VALUES 
@@ -1296,7 +1296,7 @@ VALUES
     (14, 9, '2025-01-01', 0.16, 'мЗв/рік'),
 
     -- Індекс забрудненості води (component_id = 15)
-    (15, 9, '2025-01-01', 88.0, 'індекс'), 
+    (15, 9, '2025-01-01', 88.0, 'індекс'); 
 
     INSERT INTO component_measurement (component_id, factory_id, measurement_date, value, unit)
 VALUES 
@@ -1387,7 +1387,7 @@ VALUES
     (39, 9, '2025-01-01', 105.5, 'індекс'),
 
     -- Індекс цін виробників промислової продукції (component_id = 40)
-    (40, 9, '2025-01-01', 110.0, 'індекс'), 
+    (40, 9, '2025-01-01', 110.0, 'індекс'); 
 
     INSERT INTO component_measurement (component_id, factory_id, measurement_date, value, unit)
 VALUES 
@@ -1493,7 +1493,7 @@ VALUES
     (22, 10, '2025-01-01', 6.0, 'pH'),
 
     -- Бал бонітету для складового ґрунту (component_id = 23)
-    (23, 10, '2025-01-01', 74.0, 'бал'), 
+    (23, 10, '2025-01-01', 74.0, 'бал'); 
 
     INSERT INTO component_measurement (component_id, factory_id, measurement_date, value, unit)
 VALUES 
@@ -1575,7 +1575,7 @@ VALUES
     (52, 10, '2025-01-01', 850.0, 'кВт·год/міс'),
 
     -- Енергоефективність будівлі або виробництва (component_id = 53)
-    (53, 10, '2025-01-01', 0.96, 'коефіцієнт'), 
+    (53, 10, '2025-01-01', 0.96, 'коефіцієнт'); 
 
     INSERT INTO component_measurement (component_id, factory_id, measurement_date, value, unit)
 VALUES 
