@@ -441,7 +441,6 @@ function updateMarkersAndTable() {
 }
 
 function createPieChart(data, container, title) {
-    // Очищаем контейнер
     container.innerHTML = '';
     
     const width = 200;
@@ -450,12 +449,10 @@ function createPieChart(data, container, title) {
     const centerX = width / 2;
     const centerY = height / 2;
 
-    // Создаем SVG элемент
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('width', width);
-    svg.setAttribute('height', height + 60); // Дополнительное место для легенды
+    svg.setAttribute('height', height + 60); 
     
-    // Добавляем заголовок
     const titleElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     titleElement.setAttribute('x', centerX);
     titleElement.setAttribute('y', 20);
@@ -464,66 +461,54 @@ function createPieChart(data, container, title) {
     titleElement.textContent = title;
     svg.appendChild(titleElement);
 
-    // Цвета для секторов
     const colors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
     
-    // Получаем последние значения для каждого компонента
     const componentValues = new Map();
     data.forEach(measurement => {
         componentValues.set(measurement.component_name, parseFloat(measurement.value));
     });
 
-    // Преобразуем данные для круговой диаграммы
     const pieData = Array.from(componentValues.entries()).map(([name, value]) => ({
         name,
         value
     }));
 
-    // Вычисляем общую сумму
     const total = pieData.reduce((sum, item) => sum + item.value, 0);
 
-    // Создаем группу для диаграммы
     const pieGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     pieGroup.setAttribute('transform', `translate(${centerX},${centerY})`);
 
     let startAngle = 0;
     
-    // Создаем секторы
     pieData.forEach((item, index) => {
         const percentage = item.value / total;
         const angle = percentage * 360;
         const endAngle = startAngle + angle;
         
-        // Конвертируем углы в радианы
         const startRad = (startAngle - 90) * Math.PI / 180;
         const endRad = (endAngle - 90) * Math.PI / 180;
         
-        // Вычисляем координаты
         const x1 = radius * Math.cos(startRad);
         const y1 = radius * Math.sin(startRad);
         const x2 = radius * Math.cos(endRad);
         const y2 = radius * Math.sin(endRad);
         
-        // Флаг большой дуги
         const largeArc = angle > 180 ? 1 : 0;
         
-        // Создаем путь для сектора
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         const d = [
-            `M ${x1} ${y1}`, // Перемещение к началу
-            `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`, // Дуга
-            `L 0 0`, // Линия к центру
-            'Z' // Закрыть путь
+            `M ${x1} ${y1}`, // move to start
+            `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`, // Arc
+            `L 0 0`, // Line to center
+            'Z' // Close to path
         ].join(' ');
         
         path.setAttribute('d', d);
         path.setAttribute('fill', colors[index % colors.length]);
         
-        // Добавляем всплывающую подсказку
         path.setAttribute('data-name', item.name);
         path.setAttribute('data-value', item.value.toFixed(2));
         
-        // Добавляем обработчики событий для интерактивности
         path.addEventListener('mouseover', function(e) {
             this.style.opacity = '0.8';
             showTooltip(e, this.getAttribute('data-name'), this.getAttribute('data-value'));
@@ -536,10 +521,8 @@ function createPieChart(data, container, title) {
         
         pieGroup.appendChild(path);
         
-        // Добавляем легенду
         const legendY = height + 20 + (index * 20);
         
-        // Цветной квадрат
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         rect.setAttribute('x', 10);
         rect.setAttribute('y', legendY);
@@ -547,7 +530,6 @@ function createPieChart(data, container, title) {
         rect.setAttribute('height', 10);
         rect.setAttribute('fill', colors[index % colors.length]);
         
-        // Текст легенды
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', 25);
         text.setAttribute('y', legendY + 9);
@@ -564,7 +546,6 @@ function createPieChart(data, container, title) {
     container.appendChild(svg);
 }
 
-// Функции для всплывающих подсказок
 function showTooltip(event, name, value) {
     let tooltip = document.getElementById('chart-tooltip');
     if (!tooltip) {
